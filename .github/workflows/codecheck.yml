@@ -30,12 +30,12 @@ jobs:
         # We must fetch at least the immediate parents so that if this is
         # a pull request then we can checkout the head.
         fetch-depth: 2
-
     # If this run was triggered by a pull request event, then checkout
     # the head of the pull request instead of the merge commit.
     - run: git checkout HEAD^2
       if: ${{ github.event_name == 'pull_request' }}
-
+    - name: Restoring submodules
+      run: git submodule update --init
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v1
@@ -45,7 +45,25 @@ jobs:
         # By default, queries listed here will override any specified in a config file. 
         # Prefix the list here with "+" to use these queries and those in the config file.
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
-
+    - name: Cache Qt
+      id: cache-qt
+      uses: actions/cache@v1
+      with:
+        path: ../Qt
+        key: QtCache-Qv2ray-Codechecker
+    - name: Installing Qt
+      uses: jurplel/install-qt-action@v2
+      with:
+        version: 5.15.0
+        mirror: "http://mirrors.ocf.berkeley.edu/qt/"
+        cached: ${{ steps.cache-qt.outputs.cache-hit }}
+    - name: Linux - ${{ matrix.qt_version }} - Build preparation - Install Packages
+      run: |
+        sudo add-apt-repository ppa:webispy/grpc
+        sudo add-apt-repository ppa:carsten-uppenbrink-net/openssl
+        sudo apt update
+        sudo apt install -y libgl-dev libx11-dev libxkbcommon-x11-dev libxcb-image0-dev libxcb-icccm4-dev libssl-dev libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0
+        sudo apt install -y libprotobuf-dev protobuf-compiler protobuf-c-compiler libgrpc++-dev protobuf-compiler-grpc ninja-build fcitx-frontend-qt5 libcurl4-openssl-dev
     # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
     # If this step fails, then you should remove it and run the build manually (see below)
     - name: Autobuild
